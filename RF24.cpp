@@ -11,13 +11,20 @@
 #include "RF24.h"
 
 /****************************************************************************/
+#if defined( RF24_GPIO_LIB )
+	#define DIGITAL_WRITE( p, l )	do { ( HIGH == l ) ? p->activate() : p->deactivate(); } while( 0 )
+	#define PIN_MODE( p, m )		do { p->setMode( m ); p->setActiveHigh(); } while( 0 )
+#else
+	#define DIGITAL_WRITE( p, l )	digitalWrite( p, l )
+	#define PIN_MODE( p, m )		pinMode( p, m )
+#endif
 
 void RF24::csn(bool mode)
 {
 
 #if defined (RF24_TINY)
 	if (ce_pin != csn_pin) {
-		digitalWrite(csn_pin,mode);
+		DIGITAL_WRITE(csn_pin,mode);
 	} 
 	else {
 		if (mode == HIGH) {
@@ -66,7 +73,7 @@ void RF24::csn(bool mode)
 #endif
 
 #if !defined (RF24_LINUX)
-	digitalWrite(csn_pin,mode);
+	DIGITAL_WRITE(csn_pin,mode);
 	delayMicroseconds(csDelay);
 #endif
 
@@ -77,7 +84,7 @@ void RF24::csn(bool mode)
 void RF24::ce(bool level)
 {
   //Allow for 3-pin use on ATTiny
-  if (ce_pin != csn_pin) digitalWrite(ce_pin,level);
+  if (ce_pin != csn_pin) DIGITAL_WRITE(ce_pin,level);
 }
 
 /****************************************************************************/
@@ -432,7 +439,7 @@ void RF24::print_address_register(const char* name, uint8_t reg, uint8_t qty)
 #endif
 /****************************************************************************/
 
-RF24::RF24(uint16_t _cepin, uint16_t _cspin):
+RF24::RF24(CE_CS_PIN_TYPE _cepin, CE_CS_PIN_TYPE _cspin):
   ce_pin(_cepin), csn_pin(_cspin), p_variant(false),
   payload_size(32), dynamic_payloads_enabled(false), addr_width(5),csDelay(5)//,pipe0_reading_address(0)
 {
@@ -614,29 +621,29 @@ bool RF24::begin(void)
 	
     _SPI.begin(csn_pin);
 
-	pinMode(ce_pin,OUTPUT);
+	PIN_MODE(ce_pin,OUTPUT);
 	ce(LOW);    
 
 	delay(100);
   
   #elif defined(LITTLEWIRE)
-    pinMode(csn_pin,OUTPUT);
+    PIN_MODE(csn_pin,OUTPUT);
     _SPI.begin();
     csn(HIGH);
   #elif defined(XMEGA_D3)
-	if (ce_pin != csn_pin) pinMode(ce_pin,OUTPUT);
+	if (ce_pin != csn_pin) PIN_MODE(ce_pin,OUTPUT);
 	_SPI.begin(csn_pin);
 	ce(LOW);
 	csn(HIGH);
 	delay(200);
   #else
     // Initialize pins
-    if (ce_pin != csn_pin) pinMode(ce_pin,OUTPUT);  
+    if (ce_pin != csn_pin) PIN_MODE(ce_pin,OUTPUT);  
   
     #if ! defined(LITTLEWIRE)
       if (ce_pin != csn_pin)
     #endif
-        pinMode(csn_pin,OUTPUT);
+        PIN_MODE(csn_pin,OUTPUT);
     
     _SPI.begin();
     ce(LOW);

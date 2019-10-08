@@ -23,6 +23,13 @@
   #include <DigitalIO.h>
 #endif
 
+#if defined( RF24_GPIO_LIB )
+	#include <gpiopin.h>
+	typedef Gpio::Pin* CE_CS_PIN_TYPE;
+#else
+	typedef uint16_t CE_CS_PIN_TYPE;
+#endif
+
 /**
  * Power Amplifier level.
  *
@@ -64,8 +71,8 @@ private:
   GPIO gpio;
 #endif
 
-  uint16_t ce_pin; /**< "Chip Enable" pin, activates the RX or TX role */
-  uint16_t csn_pin; /**< SPI Chip select */
+  CE_CS_PIN_TYPE ce_pin; /**< "Chip Enable" pin, activates the RX or TX role */
+  CE_CS_PIN_TYPE csn_pin; /**< SPI Chip select */
   uint16_t spi_speed; /**< SPI Bus Speed */
 #if defined (RF24_LINUX) || defined (XMEGA_D3)
   uint8_t spi_rxbuff[32+1] ; //SPI receive buffer (payload max 32 bytes)
@@ -107,7 +114,8 @@ public:
    * @param _cepin The pin attached to Chip Enable on the RF module
    * @param _cspin The pin attached to Chip Select
    */
-  RF24(uint16_t _cepin, uint16_t _cspin);
+  RF24(CE_CS_PIN_TYPE _cepin, CE_CS_PIN_TYPE _cspin);
+
   //#if defined (RF24_LINUX)
   
     /**
@@ -121,12 +129,19 @@ public:
   * @param spispeed For RPi, the SPI speed in MHZ ie: BCM2835_SPI_SPEED_8MHZ
   */
   
-  RF24(uint16_t _cepin, uint16_t _cspin, uint32_t spispeed );
+  RF24(CE_CS_PIN_TYPE _cepin, CE_CS_PIN_TYPE _cspin, uint32_t spispeed );
   //#endif
 
   #if defined (RF24_LINUX)
   virtual ~RF24() {};
   #endif
+
+  void setCePin( CE_CS_PIN_TYPE _cepin ) {
+	ce_pin = _cepin;
+  };
+  void setCsPin( CE_CS_PIN_TYPE _cspin ) {
+	csn_pin = _cspin;
+  };
 
   /**
    * Begin operation of the chip
@@ -645,7 +660,13 @@ s   *
    *
    * @return true if this is a legitimate radio
    */
-  bool isValid() { return ce_pin != 0xff && csn_pin != 0xff; }
+  bool isValid() { 
+#if defined( RF24_GPIO_LIB )
+	return ce_pin != nullptr && csn_pin != nullptr; 
+#else
+	return ce_pin != 0xff && csn_pin != 0xff; 
+#endif
+	  }
   
    /**
    * Close a pipe after it has been previously opened.
